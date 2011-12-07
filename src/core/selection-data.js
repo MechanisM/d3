@@ -45,6 +45,14 @@ d3_selectionPrototype.data = function(data, join) {
         delete nodeByKey[key];
       }
 
+      for (i = m; --i >= 0;) {
+        if (updateNodes[i]) {
+          node = updateNodes[i];
+        } else if (node && enterNodes[i]) {
+          enterNodes[i].__sibling__ = node;
+        }
+      }
+
       for (i = -1; ++i < n;) {
         if (keys[i] in nodeByKey) {
           exitNodes[i] = group[i];

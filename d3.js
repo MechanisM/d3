@@ -1345,7 +1345,14 @@ function d3_selection(groups) {
   return groups;
 }
 
-var d3_select = function(s, n) { return n.querySelector(s); },
+function d3_selection_selector(selector) {
+  return function() {
+    return d3_select(selector, this);
+  };
+}
+
+var d3_selectionPrototype = [],
+    d3_select = function(s, n) { return n.querySelector(s); },
     d3_selectAll = function(s, n) { return n.querySelectorAll(s); };
 
 // Prefer Sizzle, if available.
@@ -1353,8 +1360,6 @@ if (typeof Sizzle === "function") {
   d3_select = function(s, n) { return Sizzle(s, n)[0]; };
   d3_selectAll = function(s, n) { return Sizzle.uniqueSort(Sizzle(s, n)); };
 }
-
-var d3_selectionPrototype = [];
 
 d3.selection = function() {
   return d3_selectionRoot;
@@ -1385,12 +1390,6 @@ d3_selectionPrototype.select = function(selector) {
 
   return d3_selection(subgroups);
 };
-
-function d3_selection_selector(selector) {
-  return function() {
-    return d3_select(selector, this);
-  };
-}
 d3_selectionPrototype.selectAll = function(selector) {
   var subgroups = [],
       subgroup,
@@ -1584,34 +1583,30 @@ d3_selectionPrototype.html = function(value) {
 // TODO append(node)?
 // TODO append(function)?
 d3_selectionPrototype.append = function(name) {
-  name = d3.ns.qualify(name);
-
-  function append() {
-    return this.appendChild(document.createElementNS(this.namespaceURI, name));
-  }
-
-  function appendNS() {
-    return this.appendChild(document.createElementNS(name.space, name.local));
-  }
-
-  return this.select(name.local ? appendNS : append);
+  return this.insert(name, d3_selection_appendNull);
 };
+
+function d3_selection_appendNull() {
+  return null;
+}
 // TODO insert(node, function)?
 // TODO insert(function, string)?
 // TODO insert(function, function)?
 d3_selectionPrototype.insert = function(name, before) {
   name = d3.ns.qualify(name);
 
+  if (typeof before !== "function") before = d3_selection_selector(before);
+
   function insert() {
     return this.insertBefore(
         document.createElementNS(this.namespaceURI, name),
-        d3_select(before, this));
+        before.apply(this, arguments));
   }
 
   function insertNS() {
     return this.insertBefore(
         document.createElementNS(name.space, name.local),
-        d3_select(before, this));
+        before.apply(this, arguments));
   }
 
   return this.select(name.local ? insertNS : insert);
@@ -1670,6 +1665,14 @@ d3_selectionPrototype.data = function(data, join) {
           updateNodes[i] = exitNodes[i] = null;
         }
         delete nodeByKey[key];
+      }
+
+      for (i = m; --i >= 0;) {
+        if (updateNodes[i]) {
+          node = updateNodes[i];
+        } else if (node && enterNodes[i]) {
+          enterNodes[i].__sibling__ = node;
+        }
       }
 
       for (i = -1; ++i < n;) {
@@ -1904,7 +1907,7 @@ d3_selection_enterPrototype.select = function(selector) {
     subgroup.parentNode = group.parentNode;
     for (var i = -1, n = group.length; ++i < n;) {
       if (node = group[i]) {
-        subgroup.push(upgroup[i] = subnode = selector.call(group.parentNode, node.__data__, i));
+        subgroup.push(upgroup[i] = subnode = selector.call(group.parentNode, node.__data__, i, node.__sibling__));
         subnode.__data__ = node.__data__;
       } else {
         subgroup.push(null);
@@ -1914,6 +1917,13 @@ d3_selection_enterPrototype.select = function(selector) {
 
   return d3_selection(subgroups);
 };
+d3_selection_enterPrototype.append = function(name) {
+  return this.insert(name, d3_selection_enterBefore);
+};
+
+function d3_selection_enterBefore(d, i, sibling) {
+  return sibling;
+}
 function d3_transition(groups, id, time) {
   d3_arraySubclass(groups, d3_transitionPrototype);
 

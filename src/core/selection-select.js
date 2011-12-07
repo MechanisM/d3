@@ -22,9 +22,3 @@ d3_selectionPrototype.select = function(selector) {
 
   return d3_selection(subgroups);
 };
-
-function d3_selection_selector(selector) {
-  return function() {
-    return d3_select(selector, this);
-  };
-}

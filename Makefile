@@ -109,6 +109,7 @@ d3.core.js: \
 	src/core/selection-root.js \
 	src/core/selection-enter.js \
 	src/core/selection-enter-select.js \
+	src/core/selection-enter-append.js \
 	src/core/transition.js \
 	src/core/transition-select.js \
 	src/core/transition-selectAll.js \
